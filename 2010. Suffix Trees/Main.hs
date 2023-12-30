@@ -1,48 +1,71 @@
+import Data.List (tails, maximumBy)
+import Data.Ord (comparing)
 data SuffixTree = Leaf Int | Node [(String, SuffixTree)] 
                 deriving (Eq, Show)
 
 ------------------------------------------------------
 
 isPrefix :: String -> String -> Bool
-isPrefix 
-  = undefined
+isPrefix s s'
+  = s == take (length s) s'
 
 removePrefix :: String -> String -> String
 removePrefix
 --Pre: s is a prefix of s'
-  = undefined
+  = drop . length
 
 suffixes :: [a] -> [[a]]
 suffixes
-  = undefined
+  = init . tails
 
 isSubstring :: String -> String -> Bool
-isSubstring
-  = undefined
+isSubstring s s'
+  = any (isPrefix s) (suffixes s')
 
 findSubstrings :: String -> String -> [Int]
-findSubstrings
-  = undefined
+findSubstrings s s'
+  = [i | (i, sub) <- zip [0..] (suffixes s'), isPrefix s sub]
 
 ------------------------------------------------------
 
 getIndices :: SuffixTree -> [Int]
-getIndices 
-  = undefined
+getIndices (Leaf l)
+  = [l]
+getIndices (Node sts)
+  = concatMap (\(_, t) -> getIndices t) sts
 
 partition :: Eq a => [a] -> [a] -> ([a], [a], [a])
-partition 
-  = undefined
+partition xxs@(x:xs) yys@(y:ys)
+  | x == y    = (x : res, xrem, yrem)
+  | otherwise = ([], xxs, yys)
+  where (res, xrem, yrem) = partition xs ys
+partition xs ys
+  = ([], xs, ys)
 
 findSubstrings' :: String -> SuffixTree -> [Int]
-findSubstrings'
-  = undefined
+findSubstrings' _ (Leaf l)
+  = [l]
+findSubstrings' s (Node [])
+  = []
+findSubstrings' s (Node ((a, t) : ts))
+  | null srem = getIndices t
+  | null arem = findSubstrings' srem t
+  | otherwise = findSubstrings' s (Node ts)
+  where (_, srem, arem) = partition s a 
+
 
 ------------------------------------------------------
 
 insert :: (String, Int) -> SuffixTree -> SuffixTree
-insert 
-  = undefined
+insert (s, n) (Node [])
+  = Node [(s, Leaf n)]
+insert (s, n) (Node ((a, t) : ts))
+  | null comm = Node ((a, t) : ts')
+  | null arem = Node ((a, insert (srem, n) t) : ts)
+  | otherwise = Node ((comm, Node [(srem, Leaf n), (arem, t)]) : ts)
+  where
+    (comm, srem, arem) = partition s a
+    Node ts' = insert (s, n) (Node ts)
 
 -- This function is given
 buildTree :: String -> SuffixTree 
@@ -52,9 +75,15 @@ buildTree s
 ------------------------------------------------------
 -- Part IV
 
+repeatedSubstrings :: String -> String -> SuffixTree -> [String]
+repeatedSubstrings s s' (Leaf _)
+  = [s]
+repeatedSubstrings s s' (Node ts)
+  = concatMap (\(a, t) -> repeatedSubstrings s' (s' ++ a) t) ts
+
 longestRepeatedSubstring :: SuffixTree -> String
-longestRepeatedSubstring 
-  = undefined
+longestRepeatedSubstring
+  = maximumBy (comparing length) . repeatedSubstrings "" ""
 
 ------------------------------------------------------
 -- Example strings and suffix trees...
