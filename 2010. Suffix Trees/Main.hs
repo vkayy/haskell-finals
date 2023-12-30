@@ -31,8 +31,8 @@ findSubstrings s s'
 getIndices :: SuffixTree -> [Int]
 getIndices (Leaf l)
   = [l]
-getIndices (Node sts)
-  = concatMap (\(_, t) -> getIndices t) sts
+getIndices (Node ts)
+  = concatMap (\(_, t) -> getIndices t) ts
 
 partition :: Eq a => [a] -> [a] -> ([a], [a], [a])
 partition xxs@(x:xs) yys@(y:ys)
