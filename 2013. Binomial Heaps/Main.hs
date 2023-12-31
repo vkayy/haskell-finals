@@ -1,3 +1,6 @@
+import Data.List hiding (insert)
+import Data.Ord
+
 type BinHeap a = [BinTree a]
 
 data BinTree a = Node a Int (BinHeap a)
@@ -6,63 +9,78 @@ data BinTree a = Node a Int (BinHeap a)
 --------------------------------------------------------------
 -- PART I
 
-key :: BinTree a -> a
-key
-  = undefined
+value :: BinTree a -> a
+value (Node v _ _)
+  = v
 
 rank :: BinTree a -> Int
-rank
-  = undefined
+rank (Node _ r _)
+  = r
 
 children :: BinTree a -> [BinTree a]
-children
-  = undefined
+children (Node _ _ c)
+  = c
 
 combineTrees :: Ord a => BinTree a -> BinTree a -> BinTree a
-combineTrees 
-  = undefined
+combineTrees t@(Node v r c) t'@(Node v' r' c')
+  | v' <= v   = Node v' (r' + 1) (t : c')
+  | otherwise = Node v (r + 1) (t' : c)
 
 --------------------------------------------------------------
 -- PART II
 
 extractMin :: Ord a => BinHeap a -> a
-extractMin 
-  = undefined
+extractMin
+  = value . minimumBy (comparing value)
 
 mergeHeaps :: Ord a => BinHeap a -> BinHeap a -> BinHeap a
-mergeHeaps 
-  = undefined
+mergeHeaps h@(t@(Node v r c) : ts) h'@(t'@(Node v' r' c') : ts')
+  | r < r'    = t : mergeHeaps ts h'
+  | r > r'    = t' : mergeHeaps ts' h
+  | otherwise = mergeHeaps [combineTrees t t'] $ mergeHeaps ts ts'
+mergeHeaps ts ts'
+  | null ts   = ts'
+  | otherwise = ts
 
 insert :: Ord a => a -> BinHeap a -> BinHeap a
-insert 
-  = undefined
+insert v
+  = mergeHeaps [Node v 0 []]
 
 deleteMin :: Ord a => BinHeap a -> BinHeap a
-deleteMin 
-  = undefined
-
-remove :: Eq a => a -> BinHeap a -> BinHeap a
-remove
-  = undefined
-
-removeMin :: Ord a => BinHeap a -> (BinTree a, BinHeap a)
-removeMin
-  = undefined
+deleteMin ts
+  = mergeHeaps (delete t ts) (reverse c)
+  where t@(Node _ _ c) = head [t | t <- ts, value t == extractMin ts]
 
 binSort :: Ord a => [a] -> [a]
-binSort 
-  = undefined
+binSort xs
+  = map extractMin (take (length xs) $ iterate deleteMin h)
+  where h = foldr insert [] xs
 
 --------------------------------------------------------------
 -- PART III
 
 toBinary :: BinHeap a -> [Int]
-toBinary
-  = undefined
+toBinary ts
+  = [fromEnum $ i `elem` ranks | i <- reverse [0..maximum ranks]]
+  where ranks = map rank ts
 
 binarySum :: [Int] -> [Int] -> [Int]
-binarySum
-  = undefined
+binarySum b b'
+  = dropWhile (== 0) (car : res)
+  where
+    maxLen      = max (length b) (length b')
+    [eqb, eqb'] = map (\x -> replicate (maxLen - length x) 0 ++ x) [b, b']
+    (res, car)  = rippleCarry eqb eqb'
+
+rippleCarry :: [Int] -> [Int] -> ([Int], Int)
+rippleCarry (d:ds) (d':ds')
+  = (rem : res, quo)
+  where
+    (quo, rem) = quotRem (car + d + d') 2
+    (res, car) = rippleCarry ds ds'
+rippleCarry ds ds'
+  | null ds  = (ds', 0)
+  | null ds' = (ds, 0)
 
 ------------------------------------------------------
 -- Some sample trees...
