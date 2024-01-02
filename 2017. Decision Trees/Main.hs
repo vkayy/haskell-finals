@@ -1,5 +1,6 @@
 import Data.Maybe
 import Data.List
+import Data.Ord (comparing)
 
 type AttName = String
 
@@ -40,42 +41,52 @@ lookUp x table
 --------------------------------------------------------------------
 
 allSame :: Eq a => [a] -> Bool
-allSame 
-  = undefined
+allSame xs
+  = length (nub xs) == 1
 
 remove :: Eq a => a -> [(a, b)] -> [(a, b)]
-remove 
-  = undefined
+remove x
+  = filter (\(k, _) -> k /= x)
 
 lookUpAtt :: AttName -> Header -> Row -> AttValue
 --Pre: The attribute name is present in the given header.
-lookUpAtt
-  = undefined
+lookUpAtt an h r
+  = lookUp an (zip (map fst h) r)
 
 removeAtt :: AttName -> Header -> Row -> Row
-removeAtt
-  = undefined
+removeAtt an h r
+  = [v | (k, v) <- zip (map fst h) r, k /= an]
 
 addToMapping :: Eq a => (a, b) -> [(a, [b])] -> [(a, [b])]
-addToMapping
-  = undefined
+addToMapping kv@(k, v) map
+  | Just vs <- lookup k map = (k, v : vs) : remove k map
+  | otherwise               = (k, [v]) : map
 
 buildFrequencyTable :: Attribute -> DataSet -> [(AttValue, Int)]
 --Pre: Each row of the data set contains an instance of the attribute
-buildFrequencyTable
-  = undefined
+buildFrequencyTable (an, avs) (h, rs)
+  = map (\av -> (av, length $ filter (== av) rvs)) avs
+  where rvs = concatMap (filter (`elem` avs)) rs
 
 --------------------------------------------------------------------
 -- PART II
 --------------------------------------------------------------------
 
 nodes :: DecisionTree -> Int
-nodes 
-  = undefined
+nodes (Leaf _)
+  = 1
+nodes (Node _ ats)
+  = 1 + sum (map (nodes . snd) ats)
+nodes _
+  = 0
 
 evalTree :: DecisionTree -> Header -> Row -> AttValue
-evalTree 
-  = undefined
+evalTree Null _ _
+  = ""
+evalTree (Leaf av) _ _
+  = av
+evalTree (Node an ats) h r
+  = evalTree (lookUp (lookUpAtt an h r) ats) h r
 
 --------------------------------------------------------------------
 -- PART III
@@ -93,28 +104,45 @@ nextAtt (header, _) (classifierName, _)
   = head (filter ((/= classifierName) . fst) header)
 
 partitionData :: DataSet -> Attribute -> Partition
-partitionData 
-  = undefined
+partitionData (h, rs) (an, avs)
+  = map (\av ->
+      (av,
+        (h', map (removeAtt an h) (filter (\r -> av == lookUpAtt an h r) rs))
+    )) avs
+  where h' = remove an h
 
-buildTree :: DataSet -> Attribute -> AttSelector -> DecisionTree 
-buildTree 
-  = undefined
+buildTree :: DataSet -> Attribute -> AttSelector -> DecisionTree
+buildTree d@(h, rs) c@(cn, _) f
+  | null rs     = Null
+  | allSame cvs = Leaf cv
+  | otherwise   = Node an $ map (\(av', d') -> (av', buildTree d' c f)) ps
+  where
+    a@(an, _)    = f d c
+    ps           = partitionData d a
+    cvs@(cv : _) = map (lookUpAtt cn h) rs
 
 --------------------------------------------------------------------
 -- PART IV
 --------------------------------------------------------------------
 
 entropy :: DataSet -> Attribute -> Double
-entropy 
-  = undefined
+entropy (_, []) _
+  = 0.0
+entropy d@(_, rs) a
+  = negate . sum $ map (xlogx . (/ fromIntegral (length rs)) . fromIntegral) os
+  where os = map snd $ buildFrequencyTable a d
 
 gain :: DataSet -> Attribute -> Attribute -> Double
-gain 
-  = undefined
+gain d@(_, rs) p@(pn, _) c
+  = entropy d c - sum (zipWith (*) pps pes)
+  where
+    os  = map snd $ buildFrequencyTable p d
+    pps = map ((/ fromIntegral (length rs)) . fromIntegral) os
+    pes = map (\(_, d) -> entropy d c) (partitionData d p)
 
 bestGainAtt :: AttSelector
-bestGainAtt 
-  = undefined
+bestGainAtt d@(h, _) c@(cn, _)
+  = maximumBy (comparing (\p -> gain d p c)) (remove cn h)
 
 --------------------------------------------------------------------
 
