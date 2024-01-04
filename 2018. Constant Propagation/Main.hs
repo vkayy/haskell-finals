@@ -174,25 +174,25 @@ optimise (name, args, body)
 -- PART III
 -- Pre: the block is in SSA form
 unPhi :: Block -> Block
-unPhi (If p b b' : Assign v (Phi e e') : sts)
-  = unPhi (If p (unPhi b ++ [Assign v e]) (unPhi b' ++ [Assign v e']) : unPhi sts)
-unPhi (If p b b' : sts)
-  = If p (unPhi b) (unPhi b') : unPhi sts
-unPhi (DoWhile (Assign v (Phi e e') : sts') p : sts)
-  = Assign v e : unPhi (DoWhile (unPhi sts' ++ [Assign v e']) p : unPhi sts)
-unPhi (DoWhile b p : sts)
-  = DoWhile (unPhi b) p : unPhi sts
+unPhi (If e b b' : sts)
+  = If e (unPhi b ++ p) (unPhi b' ++ p') : unPhi (sts \\ ps)
+  where (ps, p, p') = unzip3 [(p, Assign v e, Assign v e') | p@(Assign v (Phi e e')) <- sts]
+unPhi (DoWhile b e : sts)
+  = p ++ DoWhile (unPhi (b \\ ps) ++ p') e : unPhi sts
+  where (ps, p, p') = unzip3 [(p, Assign v e, Assign v e') | p@(Assign v (Phi e e')) <- b]
 unPhi (st : sts)
   = st : unPhi sts
 unPhi _
   = []
 
--- unPhi (If e b b' : sts)
---   = If e (unPhi b ++ p) (unPhi b' ++ p') : unPhi (sts \\ ps)
---   where (ps, p, p') = unzip3 [(p, Assign v e, Assign v e') | p@(Assign v (Phi e e')) <- sts]
--- unPhi (DoWhile b e : sts)
---   = p ++ DoWhile (unPhi (b \\ ps) ++ p') e : unPhi sts
---   where (ps, p, p') = unzip3 [(p, Assign v e, Assign v e') | p@(Assign v (Phi e e')) <- b]
+-- unPhi (If p b b' : Assign v (Phi e e') : sts)
+--   = unPhi (If p (unPhi b ++ [Assign v e]) (unPhi b' ++ [Assign v e']) : unPhi sts)
+-- unPhi (If p b b' : sts)
+--   = If p (unPhi b) (unPhi b') : unPhi sts
+-- unPhi (DoWhile (Assign v (Phi e e') : sts') p : sts)
+--   = Assign v e : unPhi (DoWhile (unPhi sts' ++ [Assign v e']) p : unPhi sts)
+-- unPhi (DoWhile b p : sts)
+--   = DoWhile (unPhi b) p : unPhi sts
 -- unPhi (st : sts)
 --   = st : unPhi sts
 -- unPhi _
