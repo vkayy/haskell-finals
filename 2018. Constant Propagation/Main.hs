@@ -172,11 +172,10 @@ optimise (name, args, body)
 
 ------------------------------------------------------------------------
 -- PART III
-
-unPhi :: Block -> Block
 -- Pre: the block is in SSA form
+unPhi :: Block -> Block
 unPhi (If p b b' : Assign v (Phi e e') : sts)
-  = If p (unPhi b ++ [Assign v e]) (unPhi b' ++ [Assign v e']) : unPhi sts
+  = unPhi (If p (unPhi b ++ [Assign v e]) (unPhi b' ++ [Assign v e']) : unPhi sts)
 unPhi (If p b b' : sts)
   = If p (unPhi b) (unPhi b') : unPhi sts
 unPhi (DoWhile (Assign v (Phi e e') : sts') p : sts)
