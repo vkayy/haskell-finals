@@ -36,26 +36,45 @@ execFun (name, args, p) vs
 type State = [(Id, Int)]
 
 update :: (Id, Int) -> State -> State
-update 
-  = undefined
+update kv@(k', v') s = case lookup k' s of
+  Just _  ->  [(k, if k' == k then v' else v) | (k, v) <- s]
+  _       -> kv : s
 
 apply :: Op -> Int -> Int -> Int
-apply 
-  = undefined
+apply Add
+  = (+)
+apply Mul
+  = (*)
+apply Eq
+  = (fromEnum .) . (==)
+apply Gtr
+  = (fromEnum .) . (>)
+
 
 eval :: Exp -> State -> Int
 -- Pre: the variables in the expression will all be bound in the given state 
 -- Pre: expressions do not contain phi instructions
-eval 
-  = undefined
+eval (Const c) _
+  = c
+eval (Var v) s
+  = lookUp v s
+eval (Apply op e e') s
+  = apply op (eval e s) (eval e' s)
 
 execStatement :: Statement -> State -> State
-execStatement 
-  = undefined
+execStatement (Assign v e) s
+  = update (v, eval e s) s
+execStatement (If e b b') s
+  | eval e s == 1 = execBlock b s
+  | otherwise     = execBlock b' s
+execStatement st@(DoWhile b e) s
+  | eval e s' == 1 = execStatement st s'
+  | otherwise      = s'
+  where s' = execBlock b s
 
 execBlock :: Block -> State -> State
-execBlock 
-  = undefined
+execBlock
+  = (flip . foldl) (flip execStatement)
 
 ------------------------------------------------------------------------
 -- Given function for testing propagateConstants...
@@ -70,23 +89,72 @@ applyPropagate (name, args, body)
 
 foldConst :: Exp -> Exp
 -- Pre: the expression is in SSA form
-foldConst 
-  = undefined
+foldConst (Phi (Const c) (Const c'))
+  | c == c' = Const c
+foldConst (Apply op (Const c) (Const c'))
+  = Const (apply op c c')
+foldConst (Apply Add (Var v) (Const 0))
+  = Var v
+foldConst (Apply Add (Const 0) (Var v))
+  = Var v
+foldConst e
+  = e
 
 sub :: Id -> Int -> Exp -> Exp
 -- Pre: the expression is in SSA form
-sub 
-  = undefined
+sub v c (Var v')
+  | v == v' = Const c
+sub v c (Apply op e e')
+  = foldConst $ Apply op (sub v c e) (sub v c e')
+sub v c (Phi e e')
+  = foldConst $ Phi (sub v c e) (sub v c e')
+sub _ _ e
+  = e
 
 -- Use (by uncommenting) any of the following, as you see fit...
--- type Worklist = [(Id, Int)]
--- scan :: Id -> Int -> Block -> (Worklist, Block)
 -- scan :: (Exp -> Exp) -> Block -> (Exp -> Exp, Block)
- 
+type Worklist = [(Id, Int)]
+
+scan :: Id -> Int -> Block -> (Worklist, Block)
+scan v c []
+  = ([], [])
+
+scan v c (Assign v' e : sts)
+  | v' == "$return" = (w', Assign v' e' : sts')
+  | v == v'         = ((v, c) : w', sts')
+  | Const c <- e'   = ((v', c) : w', sts')
+  | otherwise       = (w', Assign v' e' : sts')
+  where
+    e'         = sub v c e
+    (w', sts') = scan v c sts
+
+scan v c (If e b1 b2 : sts)
+  = (w' ++ w1 ++ w2, If e' b1' b2' : sts')
+  where
+    e'         = sub v c e
+    (w1, b1')  = scan v c b1
+    (w2, b2')  = scan v c b2
+    (w', sts') = scan v c sts
+
+scan v c (DoWhile b e : sts)
+  = (w' ++ w1, DoWhile b' e' : sts')
+  where
+    e'         = sub v c e
+    (w1, b')   = scan v c b
+    (w', sts') = scan v c sts
+
 propagateConstants :: Block -> Block
 -- Pre: the block is in SSA form
-propagateConstants 
-  = undefined
+propagateConstants b
+  = propagateConstants' b iwl
+  where
+    (iwl, _) = scan "$INVALID" 0 b
+    propagateConstants' :: Block -> Worklist -> Block
+    propagateConstants' b []
+      = b
+    propagateConstants' b ((v, c) : wl)
+      = propagateConstants' b' (wl ++ wl')
+      where (wl', b') = scan v c b
 
 ------------------------------------------------------------------------
 -- Given functions for testing unPhi...
@@ -107,8 +175,29 @@ optimise (name, args, body)
 
 unPhi :: Block -> Block
 -- Pre: the block is in SSA form
-unPhi 
-  = undefined
+unPhi (If p b b' : Assign v (Phi e e') : sts)
+  = If p (unPhi b ++ [Assign v e]) (unPhi b' ++ [Assign v e']) : unPhi sts
+unPhi (If p b b' : sts)
+  = If p (unPhi b) (unPhi b') : unPhi sts
+unPhi (DoWhile (Assign v (Phi e e') : sts') p : sts)
+  = Assign v e : unPhi (DoWhile (unPhi sts' ++ [Assign v e']) p : unPhi sts)
+unPhi (DoWhile b p : sts)
+  = DoWhile (unPhi b) p : unPhi sts
+unPhi (st : sts)
+  = st : unPhi sts
+unPhi _
+  = []
+
+-- unPhi (If e b b' : sts)
+--   = If e (unPhi b ++ p) (unPhi b' ++ p') : unPhi (sts \\ ps)
+--   where (ps, p, p') = unzip3 [(p, Assign v e, Assign v e') | p@(Assign v (Phi e e')) <- sts]
+-- unPhi (DoWhile b e : sts)
+--   = p ++ DoWhile (unPhi (b \\ ps) ++ p') e : unPhi sts
+--   where (ps, p, p') = unzip3 [(p, Assign v e, Assign v e') | p@(Assign v (Phi e e')) <- b]
+-- unPhi (st : sts)
+--   = st : unPhi sts
+-- unPhi _
+--   = []
 
 ------------------------------------------------------------------------
 -- Part IV
