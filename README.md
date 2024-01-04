@@ -4,9 +4,9 @@ this repo contains my solutions to a series of tony field's january haskell test
 
 these tests are split into categories of increasing difficulty (*, **, ***), with completion detailed below.
 
-# progress log
+## progress log
 
-## *
+### *
 
 - [x] 2010. Suffix Trees 
 - [x] 2013. Binomial Heaps
@@ -14,14 +14,14 @@ these tests are split into categories of increasing difficulty (*, **, ***), wit
 - [x] 2020. Hash Array Mapped Tries
 - [ ] 2023. Cryptic Clue Solving
 
-## **
+### **
 
 - [x] 2009. Binary Decision Trees (Parts I-III)
 - [x] 2017. Decision Trees
 - [x] 2018. Constant Propagation
 - [ ] 2021. Graph Colouring and Register Allocation
 
-## ***
+### ***
 
 - [ ] 2011. Polymorphic Type Inference
 - [ ] 2012. Labelled Transition Systems
