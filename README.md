@@ -19,7 +19,7 @@ these tests are split into categories of increasing difficulty (*, **, ***), wit
 - [x] 2009. Binary Decision Diagrams (Parts I-III)
 - [x] 2017. Decision Trees
 - [x] 2018. Constant Propagation (Parts I-III)
-- [ ] 2021. Graph Colouring and Register Allocation
+- [x] 2021. Graph Colouring and Register Allocation
 
 ### ***
 
