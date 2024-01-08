@@ -12,7 +12,7 @@ these tests are split into categories of increasing difficulty (*, **, ***), wit
 - [x] 2013. Binomial Heaps
 - [x] 2019. SAT Solving (Parts I-III)
 - [x] 2020. Hash Array Mapped Tries
-- [ ] 2023. Cryptic Clue Solving
+- [x] 2023. Cryptic Clue Solving
 
 ### **
 
