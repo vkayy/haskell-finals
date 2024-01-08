@@ -5,6 +5,7 @@ import Data.Maybe
 
 import Types
 import TestData
+import Debug.Trace (trace)
 
 printF :: Formula -> IO()
 printF
@@ -132,4 +133,19 @@ dp cnf
 
 -- Bonus 2 marks
 allSat :: Formula -> [[(Id, Bool)]]
-  = undefined
+allSat f
+  = concatMap (allSat' vs) ((dp . flatten) f')
+  where
+    f'  = toCNF f
+    vs  = vars f'
+    idm = idMap f'
+    allSat' :: [Id] -> [Int] -> [[(Id, Bool)]]
+    allSat' (v : vs) rep
+      | num `elem` rep  = map ((v, True) :) rem
+      | -num `elem` rep = map ((v, False) :) rem
+      | otherwise       = map ((v, True) :) rem ++ map ((v, False) :) rem
+      where
+        num = lookUp v idm
+        rem = allSat' vs rep
+    allSat' _ rep
+      = [[]]
