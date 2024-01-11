@@ -23,7 +23,7 @@ these tests are split into categories of increasing difficulty (*, **, ***), wit
 
 ### ***
 
-- [ ] 2011. Polymorphic Type Inference
+- [x] 2011. Polymorphic Type Inference (Parts I-III)
 - [ ] 2012. Labelled Transition Systems
 - [ ] 2014. Regular Expressions and Finite Automata
 - [ ] 2015. Functions, Procedures and Memoisation
