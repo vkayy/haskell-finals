@@ -134,16 +134,16 @@ dp cnf
 -- Bonus 2 marks
 allSat :: Formula -> [[(Id, Bool)]]
 allSat f
-  = concatMap (convert idm) dps
+  = concatMap toSat dps
   where
     f'  = toCNF f
     idm = idMap f'
     dps = (dp . flatten) f'
-    getValues :: Int -> [Int] -> [Bool]
-    getValues n ns
+    choices :: Int -> [Int] -> [Bool]
+    choices n ns
       | n `elem` ns  = [True]
       | -n `elem` ns = [False]
       | otherwise    = [True, False]
-    convert :: IdMap -> [Int] -> [[(Id, Bool)]]
-    convert idm rep
-      = traverse (\(v, n) -> [(v, b) | b <- getValues n rep]) idm
+    toSat :: [Int] -> [[(Id, Bool)]]
+    toSat rep
+      = traverse (\(v, n) -> [(v, b) | b <- choices n rep]) idm
