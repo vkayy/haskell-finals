@@ -49,21 +49,25 @@ primTypes
 
 -- Pre: The search item is in the table
 lookUp :: Eq a => a -> [(a, b)] -> b
-lookUp 
-  = undefined
+lookUp x
+  = tryToLookUp x undefined
 
 tryToLookUp :: Eq a => a -> b -> [(a, b)] -> b
-tryToLookUp 
-  = undefined
+tryToLookUp k d kv
+  = fromMaybe d (lookup k kv)
 
 -- Pre: The given value is in the table
 reverseLookUp :: Eq b => b -> [(a, b)] -> [a]
-reverseLookUp 
-  = undefined
+reverseLookUp v kvs
+  = [k | (k, v') <- kvs, v == v']
 
 occurs :: String -> Type -> Bool
-occurs 
-  = undefined
+occurs s (TVar s')
+  = s == s'
+occurs s (TFun t t')
+  = occurs s t || occurs s t'
+occurs _ _
+  = False
 
 ------------------------------------------------------
 -- PART II
@@ -72,22 +76,66 @@ occurs
 -- Pre: All variables in the expression have a binding in the given 
 --      type environment
 inferType :: Expr -> TEnv -> Type
-inferType
-  = undefined
+inferType (Number _) _
+  = TInt
+inferType (Boolean b) _
+  = TBool
+inferType (Id i) env
+  = lookUp i env
+inferType (Prim i) _
+  = lookUp i primTypes
+inferType (Cond p e e') env
+  | pT /= TBool || eT /= eT'
+    = TErr
+  | otherwise
+    = eT
+  where [pT, eT, eT'] = (`inferType` env) <$> [p, e, e']
+inferType (App f a) env
+  | t /= aT   = TErr
+  | otherwise = t'
+  where
+    (TFun t t') = inferType f env
+    aT          = inferType a env
 
 ------------------------------------------------------
 -- PART III
 
-applySub
-  = undefined
+applySub s (TFun t t')
+  = TFun (applySub s t) (applySub s t')
+applySub s (TVar v)
+  = tryToLookUp v (TVar v) s
+applySub _ t
+  = t
 
 unify :: Type -> Type -> Maybe Sub
 unify t t'
   = unifyPairs [(t, t')] []
 
 unifyPairs :: [(Type, Type)] -> Sub -> Maybe Sub
-unifyPairs
-  = undefined
+unifyPairs ((TInt, TInt) : tts) s
+  = unifyPairs tts s
+unifyPairs ((TBool, TBool) : tts) s
+  = unifyPairs tts s
+unifyPairs ((TVar v, TVar v') : tts) s
+  | v == v' = unifyPairs tts s
+unifyPairs ((t, TVar v) : tts) s
+  | not occs  = unifyPairs tts' ((v, t) : s)
+  | otherwise = Nothing
+  where
+    occs = occurs v t
+    tts' = map (\(t, t') -> (applySub [(v, t)] t, applySub [(v, t)] t')) tts
+unifyPairs ((TVar v, t) : tts) s
+  | not occs  = unifyPairs tts' ((v, t) : s)
+  | otherwise = Nothing
+  where
+    occs = occurs v t
+    tts' = map (\(t, t') -> (applySub [(v, t)] t, applySub [(v, t)] t')) tts
+unifyPairs ((TFun t1 t2, TFun t1' t2') : tts) s
+  = unifyPairs ((t1, t1') : (t2, t2') : tts) s
+unifyPairs [] s
+  = Just s
+unifyPairs _ _
+  = Nothing
 
 ------------------------------------------------------
 -- PART IV
